@@ -13,7 +13,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT;
 const mongoURI = process.env.MONGO_URI;
-const JWT_SECRET = process.env.JWT_SECRET || 'secret123'; // 👈 add this to .env in production
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Connect MongoDB
 mongoose.connect(mongoURI)
@@ -115,3 +115,4 @@ app.post('/api/login', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
