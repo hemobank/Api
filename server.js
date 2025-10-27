@@ -3,36 +3,48 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const jwt = require('jsonwebtoken'); // 👈 JWT added for login token
+const jwt = require('jsonwebtoken');
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+
+const allowedOrigins = ['https://hemo-bank.vercel.app'];
+app.use(cors({
+  origin: function(origin, callback){
+    // Allow requests with no origin (like Postman)
+    if(!origin) return callback(null, true);
+    if(allowedOrigins.indexOf(origin) === -1){
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 const mongoURI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Connect MongoDB
+// MongoDB connection
 mongoose.connect(mongoURI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log('DB connection error:', err));
 
-// Schema
+// User schema & model
 const userSchema = new mongoose.Schema({
   name: { type : String, required: true },
   email: { type : String, required: true, unique: true },
   password: { type : String, required: true },
   bloodGroup: { type : String, required: true }
 });
-
 const User = mongoose.model('User', userSchema);
 
-//
 // 🔹 Registration Route
-//
 app.post('/api/register', async (req, res) => {
   try {
     const { name, email, password, bloodGroup } = req.body;
@@ -64,31 +76,25 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-//
 // 🔹 Login Route
-//
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check if email and password are provided
     if (!email || !password) {
       return res.status(400).json({ error: 'Please provide email and password' });
     }
 
-    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
-    // Generate JWT token (optional)
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       JWT_SECRET,
@@ -110,13 +116,12 @@ app.post('/api/login', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 app.get('/', (req, res) => {
   res.send('Backend is running! 👌');
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
 
