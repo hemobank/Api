@@ -117,6 +117,63 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+
+// 🔹 FORGOT PASSWORD ROUTE ✅
+app.post('/api/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString('hex');
+
+    user.resetToken = token;
+    user.resetTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 min
+    await user.save();
+
+    // 🔗 Frontend reset page URL
+    const resetLink = `https://hemo-bank.vercel.app/reset-password.html?token=${token}`;
+
+    console.log('Password Reset Link:', resetLink);
+    res.json({ message: 'Password reset link sent to email' });
+
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+// 🔹 RESET PASSWORD ROUTE ✅
+app.post('/api/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() }
+        if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+
+    await user.save();
+
+    res.json({ message: 'Password reset successful' });
+
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+// 🔹 Default Route
 app.get('/', (req, res) => {
   res.send('Backend is running! 👌');
 });
@@ -124,4 +181,3 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
