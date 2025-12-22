@@ -40,8 +40,12 @@ const userSchema = new mongoose.Schema({
   name: { type : String, required: true },
   email: { type : String, required: true, unique: true },
   password: { type : String, required: true },
-  bloodGroup: { type : String, required: true }
+  bloodGroup: { type : String, required: true },
+
+  resetToken: String,
+  resetTokenExpiry: Date
 });
+
 const User = mongoose.model('User', userSchema);
 
 // 🔹 Registration Route
@@ -122,30 +126,25 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Generate token
     const token = crypto.randomBytes(32).toString('hex');
 
     user.resetToken = token;
-    user.resetTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 min
+    user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
+
     await user.save();
 
-    // 🔗 Frontend reset page URL
     const resetLink = `https://hemo-bank.vercel.app/reset-password.html?token=${token}`;
+    console.log('Reset link:', resetLink);
 
-    console.log('Password Reset Link:', resetLink);
-    res.json({ message: 'Password reset link sent to email' });
-
-  } catch (error) {
+    res.json({ message: 'Password reset link sent' });
+  } catch (err) {
+    console.error("Forgot password route error:", err);
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 
 
 // 🔹 RESET PASSWORD ROUTE ✅
@@ -184,4 +183,5 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 
