@@ -156,7 +156,9 @@ app.post('/api/reset-password', async (req, res) => {
     const user = await User.findOne({
       resetToken: token,
       resetTokenExpiry: { $gt: Date.now() }
-        if (!user) {
+    });
+
+    if (!user) {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
 
@@ -173,6 +175,7 @@ app.post('/api/reset-password', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 // 🔹 Default Route
 app.get('/', (req, res) => {
   res.send('Backend is running! 👌');
@@ -181,3 +184,4 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
