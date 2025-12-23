@@ -7,6 +7,16 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto'); // ✅ Missing in your code
 
 dotenv.config();
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
 
 const app = express();
 
@@ -100,15 +110,29 @@ app.post('/api/forgot-password', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const token = crypto.randomBytes(32).toString('hex'); // ✅ Now works
+    const token = crypto.randomBytes(32).toString('hex');
+
     user.resetToken = token;
     user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
     await user.save();
 
     const resetLink = `https://hemo-bank.vercel.app/reset-password.html?token=${token}`;
-    console.log('Password reset link:', resetLink);
 
-    res.json({ message: 'Password reset link sent' });
+    // 📧 Send Email
+    await transporter.sendMail({
+      from: `"Hemo Bank" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: 'Reset Your Password',
+      html: `
+        <p>Hello ${user.name},</p>
+        <p>You requested to reset your password.</p>
+        <p>Click below link to reset:</p>
+        <a href="${resetLink}">${resetLink}</a>
+        <p>This link is valid for 15 minutes.</p>
+      `
+    });
+
+    res.json({ message: 'Password reset link sent to email' });
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -141,3 +165,4 @@ app.get('/', (req, res) => res.send('Backend is running! 👌'));
 
 // 🔹 Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
