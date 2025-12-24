@@ -19,7 +19,10 @@ const transporter = nodemailer.createTransport({
   },
   connectionTimeout: 10000,
   greetingTimeout: 10000,
-  socketTimeout: 10000
+  socketTimeout: 10000,
+  tls: {
+    rejectUnauthorized:false
+  }
 });
 
 
@@ -115,34 +118,42 @@ app.post('/api/forgot-password', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Token generate karo
     const token = crypto.randomBytes(32).toString('hex');
-
     user.resetToken = token;
-    user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
+    user.resetTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes
     await user.save();
 
     const resetLink = `https://hemo-bank.vercel.app/reset-password.html?token=${token}`;
 
-    // 📧 Send Email
-    await transporter.sendMail({
-      from: `"Hemo Bank" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: 'Reset Your Password',
-      html: `
-        <p>Hello ${user.name},</p>
-        <p>You requested to reset your password.</p>
-        <p>Click below link to reset:</p>
-        <a href="${resetLink}">${resetLink}</a>
-        <p>This link is valid for 15 minutes.</p>
-      `
-    });
+    // Email bhejne ka try-catch
+    try {
+      await transporter.sendMail({
+        from: `"Hemo Bank" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: 'Reset Your Password',
+        html: `
+          <p>Hello ${user.name},</p>
+          <p>You requested to reset your password.</p>
+          <p>Click below link to reset:</p>
+          <a href="${resetLink}">${resetLink}</a>
+          <p>This link is valid for 15 minutes.</p>
+        `
+      });
 
-    res.json({ message: 'Password reset link sent to email' });
+      console.log(`Reset email sent to ${user.email}`);
+      res.json({ message: '✅ Password reset link sent to your email' });
+    } catch (emailErr) {
+      console.error('Email sending failed:', emailErr);
+      res.status(500).json({ error: '❌ Could not send email. Please try again later.' });
+    }
+
   } catch (err) {
     console.error('Forgot password error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error. Please try again later.' });
   }
 });
+
 
 // 🔹 Reset Password
 app.post('/api/reset-password', async (req, res) => {
@@ -170,5 +181,6 @@ app.get('/', (req, res) => res.send('Backend is running! 👌'));
 
 // 🔹 Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
