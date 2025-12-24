@@ -9,7 +9,7 @@ const crypto = require('crypto');
 dotenv.config();
 
 // 🔹 Resend setup
-const { Resend } = require("@resend/node");
+const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
