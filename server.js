@@ -10,11 +10,16 @@ dotenv.config();
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port:465,
+  secure:true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 
@@ -165,4 +170,5 @@ app.get('/', (req, res) => res.send('Backend is running! 👌'));
 
 // 🔹 Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
